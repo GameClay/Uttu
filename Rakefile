@@ -73,6 +73,7 @@ task :cijoe do
   sh %{rake stop}
   sh %{rake install}
   sh %{rake start}
+  exit 0
 end
 
 desc "remove pkg files"
