@@ -71,6 +71,8 @@ end
 desc "execute a cijoe runner command"
 task :cijoe do
   sh %{rake stop}
+  sh %{rake install}
+  sh %{rake start}
 end
 
 desc "remove pkg files"
