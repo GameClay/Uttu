@@ -35,7 +35,12 @@ end
 
 desc "install the rubygem"
 task :install => [:package] do
-  sh %{sudo gem install pkg/#{spec.name}-#{spec.version}}
+  sh %{gem install pkg/#{spec.name}-#{spec.version}}
+end
+
+desc "uninstall the rubygem"
+task :uninstall => [:package] do
+  sh %{gem uninstall #{spec.name}}
 end
 
 desc "run all bacon specs"
