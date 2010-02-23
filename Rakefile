@@ -49,19 +49,23 @@ task :spec do
 end
 task :test => :spec
 
+def thin_pidfile
+  "workflow.pid"
+end
+
 def thin_cmd
-  "--rackup bin/github_post_receive_server.ru --port 9001 --pid workflow.pid"
+  "--rackup bin/github_post_receive_server.ru --port 9001 --pid #{thin_pidfile}"
 end
 
 desc "start server under thin (rackup)"
 task :start do
-  sh %{thin #{thin_cmd} start & echo $! > workflow.pid}
+  sh %{thin #{thin_cmd} start & echo $! > #{thin_pidfile}}
 end
 
 desc "stop server under thin (rackup)"
 task :stop do
   sh %{thin #{thin_cmd} stop}
-  sh %{rm tmp/pids/thin.pid}
+  rm_rf thin_pidfile
 end
 
 desc "execute a cijoe runner command"
