@@ -44,14 +44,14 @@ task :spec do
 end
 task :test => :spec
 
-desc "start server (main executable)"
+desc "start server under thin (rackup)"
 task :start do
-  sh %{bin/github_post_receive_server}
+  sh %{thin -R bin/github_post_receive_server.ru -p 9001 start & echo $! > tmp/pids/thin.pid}
 end
 
-desc "start server under thin (rackup)"
-task :thin do
-  sh %{thin -R bin/github_post_receive_server.ru -p 9001 start}
+desc "stop server under thin (rackup)"
+task :stop do
+  sh %{thin -R bin/github_post_receive_server.ru -p 9001 stop}
 end
 
 desc "remove pkg files"
