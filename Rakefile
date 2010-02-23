@@ -68,14 +68,6 @@ task :stop do
   rm_rf thin_pidfile
 end
 
-desc "execute a cijoe runner command"
-task :cijoe do
-  sh %{rake stop}
-  sh %{rake install}
-  sh %{rake start}
-  exit 0
-end
-
 desc "remove pkg files"
 task :clean do
   rm_rf 'pkg'
