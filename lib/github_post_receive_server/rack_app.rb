@@ -11,11 +11,12 @@
 require 'rubygems'
 require 'rack'
 require 'json'
+require 'lighthouse-api'
 
 module GithubPostReceiveServer
   class RackApp
-    GO_AWAY_COMMENT = "Be gone, foul creature of the internet."
-    THANK_YOU_COMMENT = "Thanks! You beautiful soul you."
+    GO_AWAY_COMMENT = "These are not the droids you are looking for."
+    THANK_YOU_COMMENT = "You can go about your business. Move along."
 
     # This is what you get if you make a request that isn't a POST with a 
     # payload parameter.
@@ -30,11 +31,27 @@ module GithubPostReceiveServer
       
       return rude_comment if payload.nil?
       
-      puts payload unless $TESTING # remove me!
-      
       payload = JSON.parse(payload)
       
-      # ... Your code goes here! ...
+      # TODO: Put parameters in to ENV or something
+      Lighthouse.token = '78c6ca25c0c3d631d099c8e64a73822a6a5865d3'
+      Lighthouse.account = 'gameclay'
+      
+      # Iterate the commits and check for search paths
+      # TODO: This is not the most expandable thing in the world
+      payload['commits'].each do |commit|
+        if commit['message'] =~ /Merge branch '.*\/bug-(\d*)'/
+          begin
+            # TODO: Put project ID into ENV or something
+            ticket = Lighthouse::Ticket.find($1, :params => { :project_id => 47141 })
+            ticket.state = 'fixed'
+            puts "Marking ticket #{$1} fixed (#{commit['message']})" if ticket.save
+          rescue
+            puts "Error updating ticket #{$1} (#{commit['message']})"
+          end
+        end
+      end
+      
       
       @res.write THANK_YOU_COMMENT
     end
