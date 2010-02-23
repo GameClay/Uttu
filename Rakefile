@@ -64,8 +64,10 @@ end
 
 desc "stop server under thin (rackup)"
 task :stop do
-  sh %{thin #{thin_cmd} stop}
-  rm_rf thin_pidfile
+  if File.exists?(thin_pidfile)
+    sh %{thin #{thin_cmd} stop}
+    rm_rf thin_pidfile
+  end
 end
 
 desc "remove pkg files"
