@@ -12,6 +12,7 @@ require 'rubygems'
 require 'rack'
 require 'json'
 require 'lighthouse-api'
+require 'yaml'
 
 module GithubPostReceiveServer
   class RackApp
@@ -23,6 +24,21 @@ module GithubPostReceiveServer
     def rude_comment
       @res.write GO_AWAY_COMMENT
     end
+    
+    # Our error
+    def our_error(error_string)
+      puts error_string
+      @res.write "We blew it, but we'll fix it soon!"
+    end
+    
+    def default_config
+      {
+        'lighthouse' => {
+          'account' => "your_account_name",
+          'token' => "your_rw_token"
+        },
+      }
+    end
 
     # Does what it says on the tin. By default, not much, it just prints the
     # received payload.
@@ -33,14 +49,36 @@ module GithubPostReceiveServer
       
       payload = JSON.parse(payload)
       
-      # Authenticate with the Lighthouse project
-      begin
-        # TODO: Put parameters in to ENV or something
-        Lighthouse.account = 'gameclay'
-        Lighthouse.token = '69b8ab518cdf61624b41efe429d796e08e0a288d'
-      rescue
-        return "Error authenticating Lighthouse"
+      # Load YAML
+      if not File.exists?('config.yaml')
+        File.open('config.yaml', 'w') do |out|
+          YAML.dump(default_config, out)
+        end
+        
+        return our_error("No 'config.yaml' found. An empty config has been created, please fill it in.")
       end
+      
+      yamlconfig = YAML.load_file('config.yaml')
+      
+      # Authentication credentials for Lighthouse
+      Lighthouse.account = yamlconfig['lighthouse']['account']
+      Lighthouse.token = yamlconfig['lighthouse']['token']
+      
+      # Find out what repository this is coming from
+      repository = payload['repository']
+      repoconfig = yamlconfig[repository['name']]
+      
+      if repoconfig == nil
+        yamlconfig[repository['name']] = { 'lighthouse_id' => "your_lighthouse_project_id" }
+        
+        File.open('config.yaml', 'w') do |out|
+          YAML.dump(yamlconfig, out)
+        end
+        
+        return our_error("No configuration for #{repository['name']}, an entry has been added to config.yaml, please fill it in.")
+      end
+      
+      puts "Parsing commits from repository: #{repository['name']}"
       
       # Iterate the commits and check for workflow events
       # TODO: This is not the most expandable thing in the world
@@ -49,8 +87,7 @@ module GithubPostReceiveServer
         # Look for bug fixes
         if commit['message'] =~ /Merge branch '.*\/bug-(\d*)'/
           begin
-            # TODO: Put project ID, "resolve state", and message into ENV or something
-            ticket = Lighthouse::Ticket.find($1, :params => { :project_id => 47141 })
+            ticket = Lighthouse::Ticket.find($1, :params => { :project_id => repoconfig['lighthouse_id'] })
             ticket.state = 'resolved'
             ticket.body = "Fixed by #{commit['author']['name']}.\n#{commit['url']}"
             puts "Marking ticket #{$1} fixed (#{commit['message']})" if ticket.save
