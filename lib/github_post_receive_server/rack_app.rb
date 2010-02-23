@@ -33,25 +33,33 @@ module GithubPostReceiveServer
       
       payload = JSON.parse(payload)
       
-      # TODO: Put parameters in to ENV or something
-      Lighthouse.token = '78c6ca25c0c3d631d099c8e64a73822a6a5865d3'
-      Lighthouse.account = 'gameclay'
+      # Authenticate with the Lighthouse project
+      begin
+        # TODO: Put parameters in to ENV or something
+        Lighthouse.account = 'gameclay'
+        Lighthouse.token = '69b8ab518cdf61624b41efe429d796e08e0a288d'
+      rescue
+        return "Error authenticating Lighthouse"
+      end
       
-      # Iterate the commits and check for search paths
+      # Iterate the commits and check for workflow events
       # TODO: This is not the most expandable thing in the world
       payload['commits'].each do |commit|
+        
+        # Look for bug fixes
         if commit['message'] =~ /Merge branch '.*\/bug-(\d*)'/
           begin
-            # TODO: Put project ID into ENV or something
+            # TODO: Put project ID, "resolve state", and message into ENV or something
             ticket = Lighthouse::Ticket.find($1, :params => { :project_id => 47141 })
-            ticket.state = 'fixed'
+            ticket.state = 'resolved'
+            ticket.body = "Fixed by #{commit['author']['name']}.\n#{commit['url']}"
             puts "Marking ticket #{$1} fixed (#{commit['message']})" if ticket.save
           rescue
             puts "Error updating ticket #{$1} (#{commit['message']})"
           end
         end
+        
       end
-      
       
       @res.write THANK_YOU_COMMENT
     end
