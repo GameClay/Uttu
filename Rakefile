@@ -49,14 +49,18 @@ task :spec do
 end
 task :test => :spec
 
+def thin_cmd
+  "--rackup bin/github_post_receive_server.ru --port 9001 --pid workflow.pid"
+end
+
 desc "start server under thin (rackup)"
 task :start do
-  sh %{thin -R bin/github_post_receive_server.ru -p 9001 start & echo $! > tmp/pids/thin.pid}
+  sh %{thin #{thin_cmd} start & echo $! > workflow.pid}
 end
 
 desc "stop server under thin (rackup)"
 task :stop do
-  sh %{thin -R bin/github_post_receive_server.ru -p 9001 stop}
+  sh %{thin #{thin_cmd} stop}
   sh %{rm tmp/pids/thin.pid}
 end
 
