@@ -57,6 +57,7 @@ end
 desc "stop server under thin (rackup)"
 task :stop do
   sh %{thin -R bin/github_post_receive_server.ru -p 9001 stop}
+  sh %{rm tmp/pids/thin.pid}
 end
 
 desc "remove pkg files"
