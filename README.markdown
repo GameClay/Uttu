@@ -34,6 +34,9 @@ Next create a build-worked hook in .git/hooks/build-worked:
     rake -s start
 This will restart the Workflow Post Receieve Hook
 
+## Testing
+This server is tested using a public GitHub repository which contains instances of all of workflow events that this server should detect. The repository gets 'repushed' to provide a way to deterministically test the Workflow server's interaction with Lighthouse. More information can be found in the [Lighthouse Integration Test Repository](http://github.com/ZeroStride/LighthouseIntegrationTest). The Lighthouse test project is also [available here](http://gameclay.lighthouseapp.com/projects/47141-workflow-test).
+
 ## Workflow Tasks
 The Workflow server looks for information in git commit messages.
 
