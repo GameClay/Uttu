@@ -34,4 +34,11 @@ Next create a build-worked hook in .git/hooks/build-worked:
     rake -s start
 This will restart the Workflow Post Receieve Hook
 
+## Workflow Tasks
+The Workflow server looks for information in git commit messages.
+
+### Bug Fix Branches
+When the post-receive hook sees a message in the format: `Merged branch 'initials/bug-#'` It should mark the corresponding bug as 'fixed'.
+
+## Credits
 This code is based off the template rack server at: [raggi/github_post_receive_server](http://github.com/raggi/github_post_receive_server/)
