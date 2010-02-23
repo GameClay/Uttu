@@ -64,6 +64,11 @@ task :stop do
   sh %{rm tmp/pids/thin.pid}
 end
 
+desc "execute a cijoe runner command"
+task :cijoe do
+  sh %{rake stop}
+end
+
 desc "remove pkg files"
 task :clean do
   rm_rf 'pkg'
