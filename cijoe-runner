@@ -2,3 +2,4 @@
 rake stop
 rake install
 rake start
+exit 0
