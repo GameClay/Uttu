@@ -6,7 +6,7 @@ spec = Gem::Specification.new do |s|
   s.version = "0.0.2"
   s.platform = Gem::Platform::RUBY
   s.has_rdoc = true
-  s.extra_rdoc_files = ["README", "LICENSE", 'TODO']
+  s.extra_rdoc_files = ["README.markdown", "LICENSE", 'TODO']
   s.summary = "A post commit handler server for GitHub, built on Rack"
   s.description = s.summary
   s.author = "James Tucker"
@@ -18,7 +18,7 @@ spec = Gem::Specification.new do |s|
   s.require_path = 'lib'
   #s.autorequire = 'github_post_receive_server'
   
-  s.files = %w(LICENSE README Rakefile TODO) + 
+  s.files = %w(LICENSE README.markdown Rakefile TODO) + 
             Dir.glob("{bin,lib,specs}/**/*")
             
   s.bindir = 'bin'
