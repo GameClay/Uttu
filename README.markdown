@@ -1,14 +1,16 @@
-GitHub Post Commit Server
-=========================
+GameClay Workflow GitHub Post Receive Server
+===
 
-This is a template server for using with the github callbacks. Extend it, make
-it your own, enjoy it. I've added a rackup for those of you that would prefer
-to use an evented server for this application. (It's kinda ideal in this case)
+CI Joe:
+If you use CI Joe with this repository, it can create an auto-updating server.
 
-Sadly, the way rubygems packs up binaries, I will need some assistance making
-the rackup work from the default binary install path.
+First assign the CI Joe runner command
+   $ git config --add cijoe.runner "rake -s install"
 
-For more details please see the following guide on GitHub:
-http://github.com/guides/post-receive-hooks
+Next create a build-worked hook in .git/hooks/build-worked:
+   #!/bin/sh
+   rake -s stop
+   rake -s start
+This will restart the Workflow Post Receieve Hook
 
-And please, take a look at the source, that's what it's there for.
+This server is based off of http://github.com/raggi/github_post_receive_server/
