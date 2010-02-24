@@ -69,7 +69,7 @@ module GithubPostReceiveServer
       repoconfig = yamlconfig[repository['name']]
       
       if repoconfig == nil
-        yamlconfig[repository['name']] = { 'lighthouse_id' => "your_lighthouse_project_id" }
+        yamlconfig[repository['name']] = { 'lighthouse_id' => "your_lighthouse_project_id", 'merge_state' => "resolved" }
         
         File.open('config.yaml', 'w') do |out|
           YAML.dump(yamlconfig, out)
@@ -88,7 +88,7 @@ module GithubPostReceiveServer
         if commit['message'] =~ /Merge branch '.*\/bug-(\d*)'/
           begin
             ticket = Lighthouse::Ticket.find($1, :params => { :project_id => repoconfig['lighthouse_id'] })
-            ticket.state = 'resolved'
+            ticket.state = repoconfig['merge_state']
             ticket.body = "Fixed by #{commit['author']['name']}.\n#{commit['url']}"
             puts "Marking ticket #{$1} fixed (#{commit['message']})" if ticket.save
           rescue
