@@ -23,7 +23,7 @@ Here is a sample `config.yaml`
       account: myhappyaccount
 
 ### CI Joe
-If you use CI Joe with this repository, it can create an auto-updating server.
+If you use [CI Joe](http://github.com/defunkt/cijoe) with this repository, it can create an auto-updating server.
 
 First assign the CI Joe runner command
     $ git config --add cijoe.runner "rake -s install"
