@@ -89,7 +89,7 @@ module GithubPostReceiveServer
           begin
             ticket = Lighthouse::Ticket.find($1, :params => { :project_id => repoconfig['lighthouse_id'] })
             ticket.state = repoconfig['merge_state']
-            ticket.body = "Fixed by #{commit['author']['name']}.\n#{commit['url']}"
+            ticket.body = "Fixed by #{commit['author']['name']} in [#{commit['id']}]\n#{commit['url']}"
             puts "Marking ticket #{$1} fixed (#{commit['message']})" if ticket.save
           rescue
             puts "Error updating ticket #{$1} (#{commit['message']})"
