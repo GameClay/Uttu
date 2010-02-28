@@ -1,11 +1,13 @@
 # 
 #  rack_app.rb
-#  github_post_commit_server
+#  uttu
 #
-#  Example Rack app for http://github.com/guides/post-receive-hooks
 #  
-#  Created by James Tucker on 2008-05-11.
-#  Copyright 2008 James Tucker
+#  
+#  Based on Example Rack app for http://github.com/guides/post-receive-hooks 
+#             by James Tucker on 2008-05-11.
+#  Copyright 2010 GameClay LLC
+#  Portions Copyright 2008 James Tucker
 # 
 
 require 'rubygems'
@@ -14,7 +16,7 @@ require 'json'
 require 'lighthouse-api'
 require 'yaml'
 
-module GithubPostReceiveServer
+module Uttu
   class RackApp
     GO_AWAY_COMMENT = "These are not the droids you are looking for."
     THANK_YOU_COMMENT = "You can go about your business. Move along."

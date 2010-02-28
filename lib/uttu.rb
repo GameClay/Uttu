@@ -1,1 +1,1 @@
-require 'github_post_receive_server/rack_app'
+require 'uttu/rack_app'
