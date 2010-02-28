@@ -54,5 +54,11 @@ Uttu looks for information in git commit messages. It then performs Lighthouse A
 ### Bug Fix Branches
 When the post-receive hook sees a message in the format: `Merged branch 'initials/bug-#'` It should mark the corresponding bug with the state specified in the project's `merge_state`, this defaults to `resolved`.
 
+For example, a branch named `pw/bug-3`
+![GitHub graph of a branch called pw/bug-3](http://farm5.static.flickr.com/4040/4392840115_9dcdc83509_o.png)
+
+Will cause Uttu to modify the associated ticket.
+![Uttu integrating a bug-fix branch](http://farm5.static.flickr.com/4051/4392829731_c9b7f6e14f_o.png)
+
 ## Credits
 This code is based off the template located at: [raggi/github_post_receive_server](http://github.com/raggi/github_post_receive_server/)
