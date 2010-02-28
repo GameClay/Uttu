@@ -56,7 +56,7 @@ When the post-receive hook sees a message in the format: `Merged branch 'initial
 
 For example, a branch named `pw/bug-3`
 
-![GitHub graph of a branch called pw/bug-3](http://farm5.static.flickr.com/4040/4392840115_9dcdc83509_o.png)
+![GitHub graph of a branch called pw/bug-3](http://farm3.static.flickr.com/2722/4392858949_043b9972b6_o.png)
 
 Will cause Uttu to modify the associated ticket.
 
