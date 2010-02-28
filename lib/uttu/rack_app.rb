@@ -15,7 +15,10 @@ require 'rack'
 require 'json'
 require 'lighthouse-api'
 require 'yaml'
+require 'octopi'
 
+include Octopi
+  
 module Uttu
   class RackApp
     GO_AWAY_COMMENT = "These are not the droids you are looking for."
@@ -39,6 +42,15 @@ module Uttu
           'account' => "your_account_name",
           'token' => "your_rw_token"
         },
+      }
+    end
+    
+    def default_repo_config
+      { 
+        'lighthouse_id' => "your_lighthouse_project_id", 
+        'merge_state' => "resolved",
+        'github_user' => "github_user_with_access_to_this_repo",
+        'github_token' => "github_token_for_github_user"
       }
     end
 
@@ -71,7 +83,7 @@ module Uttu
       repoconfig = yamlconfig[repository['name']]
       
       if repoconfig == nil
-        yamlconfig[repository['name']] = { 'lighthouse_id' => "your_lighthouse_project_id", 'merge_state' => "resolved" }
+        yamlconfig[repository['name']] = default_repo_config
         
         File.open('config.yaml', 'w') do |out|
           YAML.dump(yamlconfig, out)
@@ -98,9 +110,42 @@ module Uttu
           end
         end
         
+        # Look for TODO's in commit diffs
+        begin
+          authenticated_with(:login => repoconfig['github_user'], :token => repoconfig['github_token']) do 
+            gh_commit = Octopi::Commit.find(:user => "#{repository['owner']['name']}", :repo => "#{repository['name']}", :sha => "#{commit['id']}")
+
+            #puts "Commit: #{gh_commit.id} - #{gh_commit.message} - by #{gh_commit.author['name']}"
+
+            puts "Added:" if not gh_commit.added.nil?
+            gh_commit.added.each do |addition|
+              todo_parse_diff(addition)
+            end
+            puts "Removed:" if not gh_commit.removed.nil?
+            gh_commit.removed.each do |removal|
+              todo_parse_diff(removal)
+            end
+            puts "Modified:" if not gh_commit.modified.nil?
+            gh_commit.modified.each do |modifyee|
+              todo_parse_diff(modifyee)
+            end
+          end
+        rescue Octopi::InvalidLogin
+          puts "Invalid login"
+        rescue
+          puts "#{$!}"
+        end
       end
       
       @res.write THANK_YOU_COMMENT
+    end
+    
+    # Temp function to parse diffs for todo
+    def todo_parse_diff(diff)
+      if "#{diff}" =~ /filename([A-Za-z0-9_\-\.]*)diff@@ \-(\d*),(\d*) \+(\d*),(\d*) @@\s([^.]*)/
+        puts "Diff: #{$1} -#{$2}, #{$3} +#{$4}, #{$5}"
+        puts $6
+      end
     end
 
     # Call is the entry point for all rack apps.
