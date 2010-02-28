@@ -1,0 +1,1 @@
+require 'uttu/rack_app'

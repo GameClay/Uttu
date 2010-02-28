@@ -2,31 +2,31 @@ require 'rubygems'
 require 'rake/gempackagetask'
 
 spec = Gem::Specification.new do |s|
-  s.name = "github_post_receive_server"
-  s.version = "0.0.2"
+  s.name = "uttu"
+  s.version = "0.0.1"
   s.platform = Gem::Platform::RUBY
   s.has_rdoc = true
   s.extra_rdoc_files = ["README.markdown", "LICENSE", 'TODO']
-  s.summary = "A post commit handler server for GitHub, built on Rack"
+  s.summary = "A Lighthouse-GitHub workflow integration server built on Rack."
   s.description = s.summary
-  s.author = "James Tucker"
-  s.email = "jftucker@gmail.com"
-#  s.homepage = "http://code.ra66i.org/github_post_receive_server"
+  s.author = "Pat Wilson"
+  s.email = "zerostride@gmail.com"
+  s.homepage = "http://github.com/GameClay/Uttu"
   
   s.add_dependency "rack"
+  s.add_dependency "lighthouse-api"
   
   s.require_path = 'lib'
-  #s.autorequire = 'github_post_receive_server'
   
   s.files = %w(LICENSE README.markdown Rakefile TODO) + 
             Dir.glob("{bin,lib,specs}/**/*")
             
   s.bindir = 'bin'
   s.executables = %w[
-    github_post_receive_server
-    github_post_receive_server.ru
+    uttu
+    uttu.ru
   ]
-  s.default_executable = 'github_post_receive_server'
+  s.default_executable = 'uttu'
 end
 
 Rake::GemPackageTask.new(spec) do |pkg|
@@ -50,11 +50,11 @@ end
 task :test => :spec
 
 def thin_pidfile
-  "workflow.pid"
+  "uttu.pid"
 end
 
 def thin_cmd
-  "--rackup bin/github_post_receive_server.ru --port 9001 --pid #{thin_pidfile}"
+  "--rackup bin/uttu.ru --port 9001 --pid #{thin_pidfile}"
 end
 
 desc "start server under thin (rackup)"

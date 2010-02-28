@@ -14,15 +14,15 @@ abort %{
 
 begin
   require 'rubygems'
-  require 'github_post_receive_server'
+  require 'uttu'
 rescue LoadError
-  require File.dirname(__FILE__) + '/../lib/github_post_receive_server'
+  require File.dirname(__FILE__) + '/../lib/uttu'
 end
 
 app = Rack::Builder.new do
   use Rack::CommonLogger
   use Rack::Lint 
-  run GithubPostReceiveServer::RackApp.new
+  run Uttu::RackApp.new
 end
 
 options = {
