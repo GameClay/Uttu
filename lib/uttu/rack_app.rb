@@ -15,7 +15,10 @@ require 'rack'
 require 'json'
 require 'lighthouse-api'
 require 'yaml'
+require 'octopi'
 
+include Octopi
+  
 module Uttu
   class RackApp
     GO_AWAY_COMMENT = "These are not the droids you are looking for."
@@ -39,6 +42,15 @@ module Uttu
           'account' => "your_account_name",
           'token' => "your_rw_token"
         },
+      }
+    end
+    
+    def default_repo_config
+      { 
+        'lighthouse_id' => "your_lighthouse_project_id", 
+        'merge_state' => "resolved",
+        'github_user' => "github_user_with_access_to_this_repo",
+        'github_token' => "github_token_for_github_user"
       }
     end
 
@@ -71,7 +83,7 @@ module Uttu
       repoconfig = yamlconfig[repository['name']]
       
       if repoconfig == nil
-        yamlconfig[repository['name']] = { 'lighthouse_id' => "your_lighthouse_project_id", 'merge_state' => "resolved" }
+        yamlconfig[repository['name']] = default_repo_config
         
         File.open('config.yaml', 'w') do |out|
           YAML.dump(yamlconfig, out)
@@ -98,10 +110,122 @@ module Uttu
           end
         end
         
+        # Look for TODO's in commit diffs
+        begin
+          authenticated_with(:login => repoconfig['github_user'], :token => repoconfig['github_token']) do 
+            gh_commit = Octopi::Commit.find(:user => "#{repository['owner']['name']}", :repo => "#{repository['name']}", :sha => "#{commit['id']}")
+
+            #puts "Commit: #{gh_commit.id} - #{gh_commit.message} - by #{gh_commit.author['name']}"
+            
+            # This is uber-lame
+            gh_url = "https://github.com/#{repository['owner']['name']}/#{repository['name']}/blob/#{commit['id']}/"
+
+            # Check array of added files for new TODO's
+            gh_commit.added.each do |addition|
+              todo_parse_diff(addition, gh_url, repoconfig, commit)
+            end
+
+            # Check array of removed files for removed TODO's
+            gh_commit.removed.each do |removal|
+              todo_parse_diff(removal, gh_url, repoconfig, commit)
+            end
+
+            # Check array of modified files for new TODO's and removed TODO's
+            gh_commit.modified.each do |modifyee|
+              todo_parse_diff(modifyee, gh_url, repoconfig, commit)
+            end
+          end
+        rescue Octopi::InvalidLogin
+          puts "Invalid login"
+        rescue
+          puts "#{$!}"
+        end
       end
       
       @res.write THANK_YOU_COMMENT
     end
+    
+    # Temp function to parse diffs for todo
+    def todo_parse_diff(octopi_in, gh_url, repoconfig, commit)
+      
+      # Parse what we get from Octopi
+      if "#{octopi_in}" =~ /^filename([A-Za-z0-9_\-\.]*)diff((.|\s)*)/
+        filename = $1
+        
+        # Parse each diff chunk
+        $2.scan(/@@ \-(\d+),(\d+) \+(\d+),(\d+) @@(.*\s)/) do |diff|
+          # puts "#{filename} -#{$1}, #{$2} +#{$3}, #{$4}"
+          
+          addLine = Integer($3)
+          delLine = Integer($1)
+          $'.each_line do |line|
+            
+            # Line added
+            if line =~ /^\+(.*)/
+              
+              # Look for a TODO added
+              if $1 =~ /[Tt][Oo][Dd][Oo][:\-\s]*(.*)/
+                begin
+                  # Add a ticket
+                  ticket = Lighthouse::Ticket.new(:project_id => repoconfig['lighthouse_id'])
+                  ticket.title = $1
+                  ticket.tags << 'todo'
+                  ticket.body = "Created by #{commit['author']['name']} in file: [#{filename}](#{gh_url}#{filename}#L#{addLine})\n[#{commit['id']}]"
+                  puts "Creating TODO '#{$1}'" if ticket.save
+                rescue
+                  puts "Error creating new Lighthouse ticket: #{$!}"
+                end
+              end
+              
+              addLine = addLine + 1
+              
+            # Line removed
+            elsif line =~ /^\-(.*)/
+              
+              # Look for a TODO removed
+              if $1 =~ /[Tt][Oo][Dd][Oo][:\-\s]*(.*)/
+                begin
+                  tickets = Lighthouse::Ticket.find(:all, :params => { :project_id => repoconfig['lighthouse_id'], 
+                    :q => "tagged:todo not-state:resolved keyword:\"#{filename}\"" })
+                  
+                  begin
+                    tickets.each do |ticket|
+                      if ticket.title == $1
+                        ticket.state = repoconfig['merge_state']
+                        ticket.body = "Removed by #{commit['author']['name']} in file: [#{filename}](#{gh_url}#{filename}#L#{delLine})\n[#{commit['id']}]"
+                        puts "Resolving Lighthouse ticket '#{ticket.title}'" if ticket.save
+                      end
+                    end
+                  rescue
+                    puts "Error resolving Lighthouse ticket: #{$!}"
+                  end
+                rescue
+                  puts "Error searching Lighthouse tickets: #{$!}"
+                end
+              end
+              
+              delLine = delLine + 1
+              
+            # Line starts with @@, break this loop and hit the
+            # next regexp match
+            elsif line =~ /^@@/
+            
+              break # Go to the next match
+              
+            # Line starts with +, - or whitespace, avoiding
+            # something like '\ No newline at end of file'
+            elsif line =~ /^[\+\-\s]/
+              addLine = addLine + 1
+              delLine = delLine + 1
+            end
+            
+          end # end each_line iteration
+          
+        end # end diff chunk matching
+        
+      end # end parse Octopi input
+      
+    end # end method
 
     # Call is the entry point for all rack apps.
     def call(env)

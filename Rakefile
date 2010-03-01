@@ -15,6 +15,7 @@ spec = Gem::Specification.new do |s|
   
   s.add_dependency "rack"
   s.add_dependency "lighthouse-api"
+  s.add_dependency "octopi"
   
   s.require_path = 'lib'
   
