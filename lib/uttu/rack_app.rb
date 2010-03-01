@@ -117,15 +117,19 @@ module Uttu
 
             #puts "Commit: #{gh_commit.id} - #{gh_commit.message} - by #{gh_commit.author['name']}"
 
-            puts "Added:" if not gh_commit.added.nil?
+            # Check array of added files for new TODO's
             gh_commit.added.each do |addition|
               todo_parse_diff(addition)
             end
-            puts "Removed:" if not gh_commit.removed.nil?
-            gh_commit.removed.each do |removal|
-              todo_parse_diff(removal)
-            end
-            puts "Modified:" if not gh_commit.modified.nil?
+
+            # Check array of removed files for removed TODO's
+            # TODO...
+            # gh_commit.removed.each do |removal|
+            #   todo_parse_diff(removal)
+            # end
+
+            # Check array of modified files for new TODO's
+            # and removed TODO's
             gh_commit.modified.each do |modifyee|
               todo_parse_diff(modifyee)
             end
@@ -142,11 +146,53 @@ module Uttu
     
     # Temp function to parse diffs for todo
     def todo_parse_diff(diff)
-      if "#{diff}" =~ /filename([A-Za-z0-9_\-\.]*)diff@@ \-(\d*),(\d*) \+(\d*),(\d*) @@\s([^.]*)/
-        puts "Diff: #{$1} -#{$2}, #{$3} +#{$4}, #{$5}"
-        puts $6
-      end
-    end
+      
+      # Parse what we get from Octopi
+      if "#{diff}" =~ /filename([A-Za-z0-9_\-\.]*)diff((.|\s)*)/
+        filename = $1
+        
+        # Parse each diff chunk
+        if $2 =~ /^@@ \-(\d*),(\d*) \+(\d*),(\d*) @@((.|\s)*)/
+          # puts "-#{$1}, #{$2} +#{$3}, #{$4}"
+          
+          addLine = Integer($3)
+          delLine = Integer($1)
+          $5.each_line do |line|
+
+            # Line added
+            if line =~ /^\+(.*)/
+              
+              # Look for a TODO added
+              if $1 =~ /.*[Tt][Oo][Dd][Oo][:\-\s]*(.*)/
+                puts "+[#{addLine}]Todo: '#{$1}'..."
+              end
+              
+              addLine = addLine + 1
+              
+            # Line removed
+            elsif line =~ /^\-(.*)/
+              
+              # Look for a TODO removed
+              if $1 =~ /.*[Tt][Oo][Dd][Oo][:\-\s]*(.*)/
+                puts "-[#{delLine}]Todo: '#{$1}'..."
+              end
+              
+              delLine = delLine + 1
+            
+            # Line starts with +, - or whitespace, avoiding
+            #   something like '\ No newline at end of file'
+            elsif line =~ /^[\+\-\s](.*)/
+              addLine = addLine + 1
+              delLine = delLine + 1
+            end
+            
+          end # end each_line iteration
+          
+        end # end diff chunk matching
+        
+      end # end parse Octopi input
+      
+    end # end method
 
     # Call is the entry point for all rack apps.
     def call(env)
