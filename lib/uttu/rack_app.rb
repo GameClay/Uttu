@@ -145,25 +145,25 @@ module Uttu
     end
     
     # Temp function to parse diffs for todo
-    def todo_parse_diff(diff)
+    def todo_parse_diff(octopi_in)
       
       # Parse what we get from Octopi
-      if "#{diff}" =~ /filename([A-Za-z0-9_\-\.]*)diff((.|\s)*)/
+      if "#{octopi_in}" =~ /^filename([A-Za-z0-9_\-\.]*)diff((.|\s)*)/
         filename = $1
         
         # Parse each diff chunk
-        if $2 =~ /^@@ \-(\d*),(\d*) \+(\d*),(\d*) @@((.|\s)*)/
-          # puts "-#{$1}, #{$2} +#{$3}, #{$4}"
+        $2.scan(/@@ \-(\d+),(\d+) \+(\d+),(\d+) @@()/) do |diff|
+          # puts "#{filename} -#{$1}, #{$2} +#{$3}, #{$4}"
           
           addLine = Integer($3)
           delLine = Integer($1)
-          $5.each_line do |line|
-
+          $'.each_line do |line|
+            
             # Line added
             if line =~ /^\+(.*)/
               
               # Look for a TODO added
-              if $1 =~ /.*[Tt][Oo][Dd][Oo][:\-\s]*(.*)/
+              if $1 =~ /[Tt][Oo][Dd][Oo][:\-\s]*(.*)/
                 puts "+[#{addLine}]Todo: '#{$1}'..."
               end
               
@@ -173,15 +173,21 @@ module Uttu
             elsif line =~ /^\-(.*)/
               
               # Look for a TODO removed
-              if $1 =~ /.*[Tt][Oo][Dd][Oo][:\-\s]*(.*)/
+              if $1 =~ /[Tt][Oo][Dd][Oo][:\-\s]*(.*)/
                 puts "-[#{delLine}]Todo: '#{$1}'..."
               end
               
               delLine = delLine + 1
+              
+            # Line starts with @@, break this loop and hit the
+            # next regexp match
+            elsif line =~ /^@@/
             
+              break # Go to the next match
+              
             # Line starts with +, - or whitespace, avoiding
-            #   something like '\ No newline at end of file'
-            elsif line =~ /^[\+\-\s](.*)/
+            # something like '\ No newline at end of file'
+            elsif line =~ /^[\+\-\s]/
               addLine = addLine + 1
               delLine = delLine + 1
             end
