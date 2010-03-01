@@ -63,6 +63,7 @@ Will cause Uttu to modify the associated ticket.
 ![Uttu integrating a bug-fix branch](http://farm5.static.flickr.com/4051/4392829731_c9b7f6e14f_o.png)
 
 ### TODO's
+Uttu will attempt to keep track of the TODO's you add to your code.
 ![A File Adding a TODO](http://farm3.static.flickr.com/2689/4397061993_cda5b972ed_o.png)
 
 When Uttu gets a commit that has a diff chunk which adds a line with the text "TODO" (and many variations), it will automatically create a task in Lighthouse that links back to the commit, and that file/line so that TODO tasks can be collected on the Lighthouse tracker. Uttu will also look for diff chunks where a TODO gets deleted, and will automatically resolve the associated ticket. 
