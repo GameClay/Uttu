@@ -116,22 +116,23 @@ module Uttu
             gh_commit = Octopi::Commit.find(:user => "#{repository['owner']['name']}", :repo => "#{repository['name']}", :sha => "#{commit['id']}")
 
             #puts "Commit: #{gh_commit.id} - #{gh_commit.message} - by #{gh_commit.author['name']}"
+            
+            # This is uber-lame
+            gh_url = "https://github.com/#{repository['owner']['name']}/#{repository['name']}/blob/#{commit['id']}/"
 
             # Check array of added files for new TODO's
             gh_commit.added.each do |addition|
-              todo_parse_diff(addition)
+              todo_parse_diff(addition, gh_url, repoconfig, commit)
             end
 
             # Check array of removed files for removed TODO's
-            # TODO...
-            # gh_commit.removed.each do |removal|
-            #   todo_parse_diff(removal)
-            # end
+            gh_commit.removed.each do |removal|
+              todo_parse_diff(removal, gh_url, repoconfig, commit)
+            end
 
-            # Check array of modified files for new TODO's
-            # and removed TODO's
+            # Check array of modified files for new TODO's and removed TODO's
             gh_commit.modified.each do |modifyee|
-              todo_parse_diff(modifyee)
+              todo_parse_diff(modifyee, gh_url, repoconfig, commit)
             end
           end
         rescue Octopi::InvalidLogin
@@ -145,14 +146,14 @@ module Uttu
     end
     
     # Temp function to parse diffs for todo
-    def todo_parse_diff(octopi_in)
+    def todo_parse_diff(octopi_in, gh_url, repoconfig, commit)
       
       # Parse what we get from Octopi
       if "#{octopi_in}" =~ /^filename([A-Za-z0-9_\-\.]*)diff((.|\s)*)/
         filename = $1
         
         # Parse each diff chunk
-        $2.scan(/@@ \-(\d+),(\d+) \+(\d+),(\d+) @@()/) do |diff|
+        $2.scan(/@@ \-(\d+),(\d+) \+(\d+),(\d+) @@(.*\s)/) do |diff|
           # puts "#{filename} -#{$1}, #{$2} +#{$3}, #{$4}"
           
           addLine = Integer($3)
@@ -164,7 +165,16 @@ module Uttu
               
               # Look for a TODO added
               if $1 =~ /[Tt][Oo][Dd][Oo][:\-\s]*(.*)/
-                puts "+[#{addLine}]Todo: '#{$1}'..."
+                begin
+                  # Add a ticket
+                  ticket = Lighthouse::Ticket.new(:project_id => repoconfig['lighthouse_id'])
+                  ticket.title = $1
+                  ticket.tags << 'todo'
+                  ticket.body = "Created by #{commit['author']['name']} in file: [#{filename}](#{gh_url}#{filename}#L#{addLine})\n[#{commit['id']}]"
+                  puts "Creating TODO '#{$1}'" if ticket.save
+                rescue
+                  puts "Error creating new Lighthouse ticket: #{$!}"
+                end
               end
               
               addLine = addLine + 1
@@ -174,7 +184,24 @@ module Uttu
               
               # Look for a TODO removed
               if $1 =~ /[Tt][Oo][Dd][Oo][:\-\s]*(.*)/
-                puts "-[#{delLine}]Todo: '#{$1}'..."
+                begin
+                  tickets = Lighthouse::Ticket.find(:all, :params => { :project_id => repoconfig['lighthouse_id'], 
+                    :q => "tagged:todo not-state:resolved keyword:\"#{filename}\"" })
+                  
+                  begin
+                    tickets.each do |ticket|
+                      if ticket.title == $1
+                        ticket.state = repoconfig['merge_state']
+                        ticket.body = "Removed by #{commit['author']['name']} in file: [#{filename}](#{gh_url}#{filename}#L#{delLine})\n[#{commit['id']}]"
+                        puts "Resolving Lighthouse ticket '#{ticket.title}'" if ticket.save
+                      end
+                    end
+                  rescue
+                    puts "Error resolving Lighthouse ticket: #{$!}"
+                  end
+                rescue
+                  puts "Error searching Lighthouse tickets: #{$!}"
+                end
               end
               
               delLine = delLine + 1
