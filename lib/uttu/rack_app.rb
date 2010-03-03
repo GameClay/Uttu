@@ -93,7 +93,13 @@ module Uttu
       end
       
       # Look for new branches
-      if Integer(payload['before']) == 0          
+      beforeInt = -1
+      begin
+        beforeInt = Integer(payload['before'])
+      rescue
+      end
+      
+      if beforeInt == 0          
         # A new branch (or new repo) has been created, parse out the name
         if payload['ref'] =~ /refs\/heads\/(.*)/            
           # If we somehow get here with master, ignore it.
@@ -125,6 +131,24 @@ module Uttu
           rescue
             puts "Error updating ticket #{$1} (#{commit['message']})"
           end
+        end
+        
+        # Look for feature branch integrations
+        if commit['message'] =~ /Merge branch '(.*)'/
+          tickets = Lighthouse::Ticket.find(:all, :params => { :project_id => repoconfig['lighthouse_id'], 
+            :q => "tagged:branch not-state:resolved" })
+          
+            begin
+              tickets.each do |ticket|
+                if ticket.title == "Review branch: #{$1}"
+                  ticket.state = repoconfig['merge_state']
+                  ticket.body = "Merged by #{commit['author']['name']} in [#{commit['id']}]\n#{commit['url']}"
+                  puts "Resolving Lighthouse ticket '#{ticket.title}'" if ticket.save
+                end
+              end
+            rescue
+              puts "Error resolving Lighthouse ticket: #{$!}"
+            end
         end
         
         # Look for TODO's in commit diffs
