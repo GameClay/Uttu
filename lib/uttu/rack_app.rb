@@ -109,7 +109,7 @@ module Uttu
             ticket.title = "Review branch: #{$1}"
             ticket.tags << 'branch'
             # TODO: Would be cool to assign a person responsible for merging by default
-            ticket.body = "Review branch #{$1}\nhttp://github.com/#{repository['owner']['name']}/#{repository['name']}/commits/#{$1}"
+            ticket.body = "Review branch [#{$1}](http://github.com/#{repository['owner']['name']}/#{repository['name']}/compare/#{$1})"
             puts "Creating merge request ticket for '#{$1}'" if ticket.save
           end            
         end           
