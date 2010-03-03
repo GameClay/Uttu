@@ -146,84 +146,80 @@ module Uttu
     end
     
     # Temp function to parse diffs for todo
-    def todo_parse_diff(octopi_in, gh_url, repoconfig, commit)
+    def todo_parse_diff(diff, gh_url, repoconfig, commit)
       
-      # Parse what we get from Octopi
-      if "#{octopi_in}" =~ /^filename([A-Za-z0-9_\-\.]*)diff((.|\s)*)/
-        filename = $1
+      filename = diff['filename']
+      
+      # Parse each diff chunk
+      diff['diff'].scan(/@@ \-(\d+),(\d+) \+(\d+),(\d+) @@(.*\s)/) do |diff|
+        # puts "#{filename} -#{$1}, #{$2} +#{$3}, #{$4}"
         
-        # Parse each diff chunk
-        $2.scan(/@@ \-(\d+),(\d+) \+(\d+),(\d+) @@(.*\s)/) do |diff|
-          # puts "#{filename} -#{$1}, #{$2} +#{$3}, #{$4}"
+        addLine = Integer($3)
+        delLine = Integer($1)
+        $'.each_line do |line|
           
-          addLine = Integer($3)
-          delLine = Integer($1)
-          $'.each_line do |line|
+          # Line added
+          if line =~ /^\+(.*)/
             
-            # Line added
-            if line =~ /^\+(.*)/
-              
-              # Look for a TODO added
-              if $1 =~ /[Tt][Oo][Dd][Oo][:\-\s]*(.*)/
-                begin
-                  # Add a ticket
-                  ticket = Lighthouse::Ticket.new(:project_id => repoconfig['lighthouse_id'])
-                  ticket.title = $1
-                  ticket.tags << 'todo'
-                  ticket.body = "Created by #{commit['author']['name']} in file: [#{filename}](#{gh_url}#{filename}#L#{addLine})\n[#{commit['id']}]"
-                  puts "Creating TODO '#{$1}'" if ticket.save
-                rescue
-                  puts "Error creating new Lighthouse ticket: #{$!}"
-                end
+            # Look for a TODO added
+            if $1 =~ /[Tt][Oo][Dd][Oo][:\-\s]*(.*)/
+              begin
+                # Add a ticket
+                ticket = Lighthouse::Ticket.new(:project_id => repoconfig['lighthouse_id'])
+                ticket.title = $1
+                ticket.tags << 'todo'
+                ticket.body = "Created by #{commit['author']['name']} in file: [#{filename}](#{gh_url}#{filename}#L#{addLine})\n[#{commit['id']}]"
+                puts "Creating TODO '#{$1}'" if ticket.save
+              rescue
+                puts "Error creating new Lighthouse ticket: #{$!}"
               end
-              
-              addLine = addLine + 1
-              
-            # Line removed
-            elsif line =~ /^\-(.*)/
-              
-              # Look for a TODO removed
-              if $1 =~ /[Tt][Oo][Dd][Oo][:\-\s]*(.*)/
-                begin
-                  tickets = Lighthouse::Ticket.find(:all, :params => { :project_id => repoconfig['lighthouse_id'], 
-                    :q => "tagged:todo not-state:resolved keyword:\"#{filename}\"" })
-                  
-                  begin
-                    tickets.each do |ticket|
-                      if ticket.title == $1
-                        ticket.state = repoconfig['merge_state']
-                        ticket.body = "Removed by #{commit['author']['name']} in file: [#{filename}](#{gh_url}#{filename}#L#{delLine})\n[#{commit['id']}]"
-                        puts "Resolving Lighthouse ticket '#{ticket.title}'" if ticket.save
-                      end
-                    end
-                  rescue
-                    puts "Error resolving Lighthouse ticket: #{$!}"
-                  end
-                rescue
-                  puts "Error searching Lighthouse tickets: #{$!}"
-                end
-              end
-              
-              delLine = delLine + 1
-              
-            # Line starts with @@, break this loop and hit the
-            # next regexp match
-            elsif line =~ /^@@/
-            
-              break # Go to the next match
-              
-            # Line starts with +, - or whitespace, avoiding
-            # something like '\ No newline at end of file'
-            elsif line =~ /^[\+\-\s]/
-              addLine = addLine + 1
-              delLine = delLine + 1
             end
             
-          end # end each_line iteration
+            addLine = addLine + 1
+            
+          # Line removed
+          elsif line =~ /^\-(.*)/
+            
+            # Look for a TODO removed
+            if $1 =~ /[Tt][Oo][Dd][Oo][:\-\s]*(.*)/
+              begin
+                tickets = Lighthouse::Ticket.find(:all, :params => { :project_id => repoconfig['lighthouse_id'], 
+                  :q => "tagged:todo not-state:resolved keyword:\"#{filename}\"" })
+                
+                begin
+                  tickets.each do |ticket|
+                    if ticket.title == $1
+                      ticket.state = repoconfig['merge_state']
+                      ticket.body = "Removed by #{commit['author']['name']} in file: [#{filename}](#{gh_url}#{filename}#L#{delLine})\n[#{commit['id']}]"
+                      puts "Resolving Lighthouse ticket '#{ticket.title}'" if ticket.save
+                    end
+                  end
+                rescue
+                  puts "Error resolving Lighthouse ticket: #{$!}"
+                end
+              rescue
+                puts "Error searching Lighthouse tickets: #{$!}"
+              end
+            end
+            
+            delLine = delLine + 1
+            
+          # Line starts with @@, break this loop and hit the
+          # next regexp match
+          elsif line =~ /^@@/
           
-        end # end diff chunk matching
+            break # Go to the next match
+            
+          # Line starts with +, - or whitespace, avoiding
+          # something like '\ No newline at end of file'
+          elsif line =~ /^[\+\-\s]/
+            addLine = addLine + 1
+            delLine = delLine + 1
+          end
+          
+        end # end each_line iteration
         
-      end # end parse Octopi input
+      end # end diff chunk matching
       
     end # end method
 
