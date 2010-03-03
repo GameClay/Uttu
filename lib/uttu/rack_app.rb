@@ -92,6 +92,23 @@ module Uttu
         return our_error("No configuration for #{repository['name']}, an entry has been added to config.yaml, please fill it in.")
       end
       
+      # Look for new branches
+      if Integer(payload['before']) == 0          
+        # A new branch (or new repo) has been created, parse out the name
+        if payload['ref'] =~ /refs\/heads\/(.*)/            
+          # If we somehow get here with master, ignore it.
+          if $1 != "master"
+            # Add a ticket to merge this branch 
+            ticket = Lighthouse::Ticket.new(:project_id => repoconfig['lighthouse_id'])
+            ticket.title = "Review branch: #{$1}"
+            ticket.tags << 'branch'
+            # TODO: Would be cool to assign a person responsible for merging by default
+            ticket.body = "Review branch #{$1}\nhttp://github.com/#{repository['owner']['name']}/#{repository['name']}/commits/#{$1}"
+            puts "Creating merge request ticket for '#{$1}'" if ticket.save
+          end            
+        end           
+      end
+      
       puts "Parsing commits from repository: #{repository['name']}"
       
       # Iterate the commits and check for workflow events
