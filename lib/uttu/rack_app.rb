@@ -92,6 +92,29 @@ module Uttu
         return our_error("No configuration for #{repository['name']}, an entry has been added to config.yaml, please fill it in.")
       end
       
+      # Look for new branches
+      beforeInt = -1
+      begin
+        beforeInt = Integer(payload['before'])
+      rescue
+      end
+      
+      if beforeInt == 0          
+        # A new branch (or new repo) has been created, parse out the name
+        if payload['ref'] =~ /refs\/heads\/(.*)/            
+          # If we somehow get here with master, ignore it.
+          if $1 != "master"
+            # Add a ticket to merge this branch 
+            ticket = Lighthouse::Ticket.new(:project_id => repoconfig['lighthouse_id'])
+            ticket.title = "Review branch: #{$1}"
+            ticket.tags << 'branch'
+            # TODO: Would be cool to assign a person responsible for merging by default
+            ticket.body = "Review branch [#{$1}](http://github.com/#{repository['owner']['name']}/#{repository['name']}/compare/#{$1})"
+            puts "Creating merge request ticket for '#{$1}'" if ticket.save
+          end            
+        end           
+      end
+      
       puts "Parsing commits from repository: #{repository['name']}"
       
       # Iterate the commits and check for workflow events
@@ -108,6 +131,24 @@ module Uttu
           rescue
             puts "Error updating ticket #{$1} (#{commit['message']})"
           end
+        end
+        
+        # Look for feature branch integrations
+        if commit['message'] =~ /Merge branch '(.*)'/
+          tickets = Lighthouse::Ticket.find(:all, :params => { :project_id => repoconfig['lighthouse_id'], 
+            :q => "tagged:branch not-state:resolved" })
+          
+            begin
+              tickets.each do |ticket|
+                if ticket.title == "Review branch: #{$1}"
+                  ticket.state = repoconfig['merge_state']
+                  ticket.body = "Merged by #{commit['author']['name']} in [#{commit['id']}]\n#{commit['url']}"
+                  puts "Resolving Lighthouse ticket '#{ticket.title}'" if ticket.save
+                end
+              end
+            rescue
+              puts "Error resolving Lighthouse ticket: #{$!}"
+            end
         end
         
         # Look for TODO's in commit diffs
