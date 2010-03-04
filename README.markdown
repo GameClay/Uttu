@@ -46,10 +46,16 @@ Next create a build-worked hook in .git/hooks/build-worked:
 This will restart Uttu if the rake install task succeeded; your Uttu server now reflects the changes you just pushed.
 
 ## Testing
-Uttu is tested using a public GitHub repository which contains instances of all of workflow events that this server should detect. The repository gets 'repushed' to provide a way to deterministically test Uttu's interaction with Lighthouse. More information can be found in the [Lighthouse Integration Test Repository](http://github.com/ZeroStride/LighthouseIntegrationTest). The Lighthouse test project is also [available here](http://gameclay.lighthouseapp.com/projects/47141/home).
+Uttu is tested using a GitHub repository which contains instances of all of workflow events that this server should detect. The repository gets 'repushed' to provide a way to deterministically test Uttu's interaction with Lighthouse. To do this easily, use a simple script. This is the meat of the script:
+    git reset --hard _some\_commit_ # Return the repository to a previous state
+    git push --force                # Push with --force to return the origin index to the previous state
+    git reset --hard HEAD@{1}       # Restore the "last state" of our repository from the reflog
+    git push                        # Push all commits to origin
+
+More information can be found in our [Lighthouse Integration Test Repository](http://github.com/ZeroStride/LighthouseIntegrationTest). The Lighthouse test project is also [available here](http://gameclay.lighthouseapp.com/projects/47141/home).
 
 ## Workflow Tasks
-Uttu looks for information in git commit messages. It then performs Lighthouse API tasks 
+Uttu looks for information in git commit messages. It then performs Lighthouse API tasks .
 
 ### Bug Fix Branches
 When Uttu sees a message in the format: `Merged branch 'initials/bug-#'` It should mark the corresponding bug with the state specified in the project's `merge_state`, this defaults to `resolved`.
