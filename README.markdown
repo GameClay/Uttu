@@ -2,6 +2,11 @@
 ## GameClay Workflow GitHub Post Receive Server
 This is the workflow server that wires GameClay GitHub projects in to Lighthouse for specific git actions.
 
+### Managed Tickets
+We can all agree that bug trackers are very useful, and that proper use of version control workflow is very useful. Previously, this included a lot of duplicated effort. When proper use of tools delays the development process on a repetitive basis, any benefit from those tools is harder to see. In order to allow a lead programmer to truly be both a lead, and a programmer Uttu introduces the concept of _managed tickets_ to the project workflow. A managed ticket is kept automatically updated with information Uttu retrieves from GitHub, removing the need to duplicate work in both version control, and bug tracker.
+
+For example: When someone adds a 'TODO' to your code, Uttu will find it and create a ticket for that task, including commit information. If that comment is later deleted, Uttu will resolve the ticket, and include applicable information.
+
 ## Configuration
 Running the server will create a template `config.yaml` for you to fill in with the Lighthouse subdomain and API token. For more information on Lighthouse API tokens, please see: [How do I get an API token?](https://lighthouse.tenderapp.com/faqs/api/how-do-i-get-an-api-token)
 
@@ -58,7 +63,7 @@ More information can be found in our [Lighthouse Integration Test Repository](ht
 Uttu looks for information in git commit messages. It then performs Lighthouse API tasks .
 
 ### Bug Fix Branches
-When Uttu sees a message in the format: `Merged branch 'initials/bug-#'` It should mark the corresponding bug with the state specified in the project's `merge_state`, this defaults to `resolved`.
+When Uttu sees a commit to the master branch with the message in the format: `Merged branch 'initials/bug-#'` It will mark the corresponding bug with the state specified in the project's `merge_state`; this defaults to `resolved`.
 
 For example, a branch named `pw/bug-3`
 
@@ -76,5 +81,10 @@ When Uttu gets a commit that has a diff chunk which adds a line with the text "T
 
 ![Resulting TODO added, and later resolved, by Uttu](http://farm5.static.flickr.com/4043/4397828336_40bf22c315_o.png)
 
+### Feature Branches
+Uttu looks for the addition of feature branches to the repository. When it sees the addition of a feature-branch, it creates a managed Lighthouse ticket
+
 ## Credits
 This code is based off the template located at: [raggi/github_post_receive_server](http://github.com/raggi/github_post_receive_server/)
+
+Uttu is Copyright (c) GameClay LLC

@@ -92,18 +92,18 @@ module Uttu
         return our_error("No configuration for #{repository['name']}, an entry has been added to config.yaml, please fill it in.")
       end
       
-      # Look for new branches
-      beforeInt = -1
-      begin
-        beforeInt = Integer(payload['before'])
-      rescue
+      # Find out what ref this commit is using
+      branch = "master"
+      if payload['ref'] =~ /refs\/heads\/(.*)/  
+        branch = $1
       end
       
-      if beforeInt == 0          
-        # A new branch (or new repo) has been created, parse out the name
-        if payload['ref'] =~ /refs\/heads\/(.*)/            
-          # If we somehow get here with master, ignore it.
-          if $1 != "master"
+      # Look for new branches      
+      begin
+        if Integer(payload['before']) == 0          
+          # A new branch (or new repo) has been created, but 
+          # if we somehow get here with master, ignore it.
+          if branch != "master"
             # Add a ticket to merge this branch 
             ticket = Lighthouse::Ticket.new(:project_id => repoconfig['lighthouse_id'])
             ticket.title = "Review branch: #{$1}"
@@ -111,8 +111,9 @@ module Uttu
             # TODO: Would be cool to assign a person responsible for merging by default
             ticket.body = "Review branch [#{$1}](http://github.com/#{repository['owner']['name']}/#{repository['name']}/compare/#{$1})"
             puts "Creating merge request ticket for '#{$1}'" if ticket.save
-          end            
-        end           
+          end                    
+        end
+      rescue
       end
       
       puts "Parsing commits from repository: #{repository['name']}"
@@ -121,66 +122,75 @@ module Uttu
       # TODO: This is not the most expandable thing in the world
       payload['commits'].each do |commit|
         
-        # Look for bug fixes
-        if commit['message'] =~ /Merge branch '.*\/bug-(\d*)'/
-          begin
-            ticket = Lighthouse::Ticket.find($1, :params => { :project_id => repoconfig['lighthouse_id'] })
-            ticket.state = repoconfig['merge_state']
-            ticket.body = "Fixed by #{commit['author']['name']} in [#{commit['id']}]\n#{commit['url']}"
-            puts "Marking ticket #{$1} fixed (#{commit['message']})" if ticket.save
-          rescue
-            puts "Error updating ticket #{$1} (#{commit['message']})"
-          end
-        end
+        # Look for some specific events on the master branch
+        if branch == "master"
         
-        # Look for feature branch integrations
-        if commit['message'] =~ /Merge branch '(.*)'/
-          tickets = Lighthouse::Ticket.find(:all, :params => { :project_id => repoconfig['lighthouse_id'], 
-            :q => "tagged:branch not-state:resolved" })
-          
+          # Look for bug fixes
+          if commit['message'] =~ /Merge branch '.*\/bug-(\d*)'/
             begin
-              tickets.each do |ticket|
-                if ticket.title == "Review branch: #{$1}"
-                  ticket.state = repoconfig['merge_state']
-                  ticket.body = "Merged by #{commit['author']['name']} in [#{commit['id']}]\n#{commit['url']}"
-                  puts "Resolving Lighthouse ticket '#{ticket.title}'" if ticket.save
-                end
-              end
+              ticket = Lighthouse::Ticket.find($1, :params => { :project_id => repoconfig['lighthouse_id'] })
+              ticket.state = repoconfig['merge_state']
+              ticket.body = "Fixed by #{commit['author']['name']} in [#{commit['id']}]\n#{commit['url']}"
+              puts "Marking ticket #{$1} fixed (#{commit['message']})" if ticket.save
             rescue
-              puts "Error resolving Lighthouse ticket: #{$!}"
+              puts "Error updating ticket #{$1} (#{commit['message']})"
             end
-        end
+          end
+        
+          # Look for feature branch integrations
+          if commit['message'] =~ /Merge branch '(.*)'/
+            tickets = Lighthouse::Ticket.find(:all, :params => { :project_id => repoconfig['lighthouse_id'], 
+              :q => "tagged:branch not-state:resolved" })
+          
+              begin
+                tickets.each do |ticket|
+                  if ticket.title == "Review branch: #{$1}"
+                    ticket.state = repoconfig['merge_state']
+                    ticket.body = "Merged by #{commit['author']['name']} in [#{commit['id']}]\n#{commit['url']}"
+                    puts "Resolving Lighthouse ticket '#{ticket.title}'" if ticket.save
+                  end
+                end
+              rescue
+                puts "Error resolving Lighthouse ticket: #{$!}"
+              end
+          end
+        end # end master branch stuff (TODO: This one-file, no-objects approach has got to be fixed.)
+        
+        # TODO: Look for commits made to branches, and update any associated tickets
         
         # Look for TODO's in commit diffs
-        begin
-          authenticated_with(:login => repoconfig['github_user'], :token => repoconfig['github_token']) do 
-            gh_commit = Octopi::Commit.find(:user => "#{repository['owner']['name']}", :repo => "#{repository['name']}", :sha => "#{commit['id']}")
+        if branch == "master"
+          begin
+            authenticated_with(:login => repoconfig['github_user'], :token => repoconfig['github_token']) do 
+              gh_commit = Octopi::Commit.find(:user => "#{repository['owner']['name']}", :repo => "#{repository['name']}", :sha => "#{commit['id']}")
 
-            #puts "Commit: #{gh_commit.id} - #{gh_commit.message} - by #{gh_commit.author['name']}"
+              #puts "Commit: #{gh_commit.id} - #{gh_commit.message} - by #{gh_commit.author['name']}"
             
-            # This is uber-lame
-            gh_url = "https://github.com/#{repository['owner']['name']}/#{repository['name']}/blob/#{commit['id']}/"
+              # This is uber-lame
+              gh_url = "https://github.com/#{repository['owner']['name']}/#{repository['name']}/blob/#{commit['id']}/"
 
-            # Check array of added files for new TODO's
-            gh_commit.added.each do |addition|
-              todo_parse_diff(addition, gh_url, repoconfig, commit)
-            end
+              # Check array of added files for new TODO's
+              gh_commit.added.each do |addition|
+                todo_parse_diff(addition, gh_url, repoconfig, commit)
+              end
 
-            # Check array of removed files for removed TODO's
-            gh_commit.removed.each do |removal|
-              todo_parse_diff(removal, gh_url, repoconfig, commit)
-            end
+              # Check array of removed files for removed TODO's
+              gh_commit.removed.each do |removal|
+                todo_parse_diff(removal, gh_url, repoconfig, commit)
+              end
 
-            # Check array of modified files for new TODO's and removed TODO's
-            gh_commit.modified.each do |modifyee|
-              todo_parse_diff(modifyee, gh_url, repoconfig, commit)
+              # Check array of modified files for new TODO's and removed TODO's
+              gh_commit.modified.each do |modifyee|
+                todo_parse_diff(modifyee, gh_url, repoconfig, commit)
+              end
             end
+          rescue Octopi::InvalidLogin
+            puts "Invalid login"
+          rescue
+            puts "#{$!}"
           end
-        rescue Octopi::InvalidLogin
-          puts "Invalid login"
-        rescue
-          puts "#{$!}"
-        end
+        end # end TODO parsing
+        
       end
       
       @res.write THANK_YOU_COMMENT
@@ -192,75 +202,78 @@ module Uttu
       filename = diff['filename']
       
       # Parse each diff chunk
-      diff['diff'].scan(/@@ \-(\d+),(\d+) \+(\d+),(\d+) @@(.*\s)/) do |diff|
-        # puts "#{filename} -#{$1}, #{$2} +#{$3}, #{$4}"
+      begin
+        diff['diff'].scan(/@@ \-(\d+),(\d+) \+(\d+),(\d+) @@(.*\s)/) do |diff|
+          # puts "#{filename} -#{$1}, #{$2} +#{$3}, #{$4}"
         
-        addLine = Integer($3)
-        delLine = Integer($1)
-        $'.each_line do |line|
+          addLine = Integer($3)
+          delLine = Integer($1)
+          $'.each_line do |line|
           
-          # Line added
-          if line =~ /^\+(.*)/
+            # Line added
+            if line =~ /^\+(.*)/
             
-            # Look for a TODO added
-            if $1 =~ /[Tt][Oo][Dd][Oo][:\-\s]*(.*)/
-              begin
-                # Add a ticket
-                ticket = Lighthouse::Ticket.new(:project_id => repoconfig['lighthouse_id'])
-                ticket.title = $1
-                ticket.tags << 'todo'
-                ticket.body = "Created by #{commit['author']['name']} in file: [#{filename}](#{gh_url}#{filename}#L#{addLine})\n[#{commit['id']}]"
-                puts "Creating TODO '#{$1}'" if ticket.save
-              rescue
-                puts "Error creating new Lighthouse ticket: #{$!}"
-              end
-            end
-            
-            addLine = addLine + 1
-            
-          # Line removed
-          elsif line =~ /^\-(.*)/
-            
-            # Look for a TODO removed
-            if $1 =~ /[Tt][Oo][Dd][Oo][:\-\s]*(.*)/
-              begin
-                tickets = Lighthouse::Ticket.find(:all, :params => { :project_id => repoconfig['lighthouse_id'], 
-                  :q => "tagged:todo not-state:resolved keyword:\"#{filename}\"" })
-                
+              # Look for a TODO added
+              if $1 =~ /[Tt][Oo][Dd][Oo][:\-\s]*(.*)/
                 begin
-                  tickets.each do |ticket|
-                    if ticket.title == $1
-                      ticket.state = repoconfig['merge_state']
-                      ticket.body = "Removed by #{commit['author']['name']} in file: [#{filename}](#{gh_url}#{filename}#L#{delLine})\n[#{commit['id']}]"
-                      puts "Resolving Lighthouse ticket '#{ticket.title}'" if ticket.save
+                  # Add a ticket
+                  ticket = Lighthouse::Ticket.new(:project_id => repoconfig['lighthouse_id'])
+                  ticket.title = $1
+                  ticket.tags << 'todo'
+                  ticket.body = "Created by #{commit['author']['name']} in file: [#{filename}](#{gh_url}#{filename}#L#{addLine})\n[#{commit['id']}]"
+                  puts "Creating TODO '#{$1}'" if ticket.save
+                rescue
+                  puts "Error creating new Lighthouse ticket: #{$!}"
+                end
+              end
+            
+              addLine = addLine + 1
+            
+            # Line removed
+            elsif line =~ /^\-(.*)/
+            
+              # Look for a TODO removed
+              if $1 =~ /[Tt][Oo][Dd][Oo][:\-\s]*(.*)/
+                begin
+                  tickets = Lighthouse::Ticket.find(:all, :params => { :project_id => repoconfig['lighthouse_id'], 
+                    :q => "tagged:todo not-state:resolved keyword:\"#{filename}\"" })
+                
+                  begin
+                    tickets.each do |ticket|
+                      if ticket.title == $1
+                        ticket.state = repoconfig['merge_state']
+                        ticket.body = "Removed by #{commit['author']['name']} in file: [#{filename}](#{gh_url}#{filename}#L#{delLine})\n[#{commit['id']}]"
+                        puts "Resolving Lighthouse ticket '#{ticket.title}'" if ticket.save
+                      end
                     end
+                  rescue
+                    puts "Error resolving Lighthouse ticket: #{$!}"
                   end
                 rescue
-                  puts "Error resolving Lighthouse ticket: #{$!}"
+                  puts "Error searching Lighthouse tickets: #{$!}"
                 end
-              rescue
-                puts "Error searching Lighthouse tickets: #{$!}"
               end
+            
+              delLine = delLine + 1
+            
+            # Line starts with @@, break this loop and hit the
+            # next regexp match
+            elsif line =~ /^@@/
+          
+              break # Go to the next match
+            
+            # Line starts with +, - or whitespace, avoiding
+            # something like '\ No newline at end of file'
+            elsif line =~ /^[\+\-\s]/
+              addLine = addLine + 1
+              delLine = delLine + 1
             end
-            
-            delLine = delLine + 1
-            
-          # Line starts with @@, break this loop and hit the
-          # next regexp match
-          elsif line =~ /^@@/
           
-            break # Go to the next match
-            
-          # Line starts with +, - or whitespace, avoiding
-          # something like '\ No newline at end of file'
-          elsif line =~ /^[\+\-\s]/
-            addLine = addLine + 1
-            delLine = delLine + 1
-          end
-          
-        end # end each_line iteration
+          end # end each_line iteration
         
-      end # end diff chunk matching
+        end # end diff chunk matching
+      rescue
+      end
       
     end # end method
 
