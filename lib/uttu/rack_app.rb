@@ -126,7 +126,7 @@ module Uttu
         if branch == "master"
         
           # Look for bug fixes
-          if commit['message'] =~ /Merge branch '.*\/(bug|task)-(\d*).*'/
+          if commit['message'] =~ /Merge branch '.*\/bug|task-(\d*).*'/
             begin
               ticket = Lighthouse::Ticket.find($1, :params => { :project_id => repoconfig['lighthouse_id'] })
               ticket.state = repoconfig['merge_state']
