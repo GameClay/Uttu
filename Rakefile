@@ -44,9 +44,9 @@ task :uninstall => [:package] do
   sh %{gem uninstall #{spec.name}}
 end
 
-desc "run all bacon specs"
+desc "run all rspec specs"
 task :spec do
-  sh %{bacon spec/**/*_spec.rb}
+  sh %{spec spec/**/*_spec.rb}
 end
 task :test => :spec
 
