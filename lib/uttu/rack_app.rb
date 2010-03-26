@@ -213,6 +213,7 @@ module Uttu
     
     def curse_parse_diff(diff, gh_url, repoconfig, commit)
        filename = diff['filename']
+       p "Checking for curse in #{filename}"
 
        # Parse each diff chunk
        begin
@@ -226,27 +227,38 @@ module Uttu
 
                mainline = $1
                mainline.strip!
+               p "Checking #{mainline}"
                httpauth = Twitter::HTTPAuth.new(repoconfig['twitter_name'], repoconfig['twitter_password'])
                client = Twitter::Base.new httpauth
                if mainline =~ /.*fuck.*/i
+                  p "Curse!"
                   client.update(mainline)
                elsif mainline =~ /.*shit.*/i
+                  p "Curse!"
                   client.update(mainline)
                elsif mainline =~ /.*cock.*/i
+                  p "Curse!"
                   client.udpate(mainline)
                elsif mainline =~ /.*bitch.*/i
+                  p "Curse!"
                   client.udpate(mainline)
                elsif mainline =~ /.*cunt.*/i
+                  p "Curse!"
                   client.udpate(mainline)
                elsif mainline =~ /.*bastard.*/i
+                  p "Curse!"
                   client.udpate(mainline)
                elsif mainline =~ /.*dick.*/i
+                  p "Curse!"
                   client.udpate(mainline)
                elsif mainline =~ /.*whore.*/i
+                  p "Curse!"
                   client.udpate(mainline)
                elsif mainline =~ /.*goddman.*/i
+                  p "Curse!"
                   client.udpate(mainline)
                elsif mainline =~ /.*asshole.*/i
+                  p "Curse!"
                   client.udpate(mainline)
                end
             end
