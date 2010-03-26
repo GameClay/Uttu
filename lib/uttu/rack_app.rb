@@ -54,6 +54,36 @@ module Uttu
       }
     end
 
+    def load_config(payload)
+       # Load YAML
+       if not File.exists?('config.yaml')
+         File.open('config.yaml', 'w') do |out|
+           YAML.dump(default_config, out)
+         end
+
+         our_error("No 'config.yaml' found. An empty config has been created, please fill it in.")
+         return nil
+       end
+
+       yamlconfig = YAML.load_file('config.yaml')
+
+       # Find out what repository this is coming from
+       repository = payload['repository']
+       repoconfig = yamlconfig[repository['name']]
+
+       if repoconfig.nil?
+         yamlconfig[repository['name']] = default_repo_config
+
+         File.open('config.yaml', 'w') do |out|
+           YAML.dump(yamlconfig, out)
+         end
+
+         our_error("No configuration for #{repository['name']}, an entry has been added to config.yaml, please fill it in.")
+         return nil
+       end
+       return yamlconfig
+    end
+
     # Does what it says on the tin. By default, not much, it just prints the
     # received payload.
     def handle_request
@@ -63,34 +93,14 @@ module Uttu
       
       payload = JSON.parse(payload)
       
-      # Load YAML
-      if not File.exists?('config.yaml')
-        File.open('config.yaml', 'w') do |out|
-          YAML.dump(default_config, out)
-        end
-        
-        return our_error("No 'config.yaml' found. An empty config has been created, please fill it in.")
-      end
-      
-      yamlconfig = YAML.load_file('config.yaml')
+      yamlconfig = load_config payload
+      return unless yamlconfig
+      repository = payload['repository']
+      repoconfig = yamlconfig[repository['name']]
       
       # Authentication credentials for Lighthouse
       Lighthouse.account = yamlconfig['lighthouse']['account']
       Lighthouse.token = yamlconfig['lighthouse']['token']
-      
-      # Find out what repository this is coming from
-      repository = payload['repository']
-      repoconfig = yamlconfig[repository['name']]
-      
-      if repoconfig == nil
-        yamlconfig[repository['name']] = default_repo_config
-        
-        File.open('config.yaml', 'w') do |out|
-          YAML.dump(yamlconfig, out)
-        end
-        
-        return our_error("No configuration for #{repository['name']}, an entry has been added to config.yaml, please fill it in.")
-      end
       
       # Find out what ref this commit is using
       branch = "master"
