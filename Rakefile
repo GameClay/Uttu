@@ -54,8 +54,12 @@ def thin_pidfile
   "uttu.pid"
 end
 
+def thin_logfile
+  "uttu.log"
+end
+
 def thin_cmd
-  "--rackup bin/uttu.ru --port 9001 --pid #{thin_pidfile}"
+  "--rackup bin/uttu.ru --port 9001 --pid #{thin_pidfile} --log #{thin_logfile}"
 end
 
 desc "start server under thin (rackup)"
