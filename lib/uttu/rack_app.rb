@@ -16,6 +16,7 @@ require 'json'
 require 'lighthouse-api'
 require 'yaml'
 require 'octopi'
+require 'twitter'
 
 include Octopi
   
@@ -182,6 +183,7 @@ module Uttu
               # Check array of added files for new TODO's
               gh_commit.added.each do |addition|
                 todo_parse_diff(addition, gh_url, repoconfig, commit)
+                curse_parse_diff(addition, gh_url, repoconfig, commit)
               end
 
               # Check array of removed files for removed TODO's
@@ -192,6 +194,7 @@ module Uttu
               # Check array of modified files for new TODO's and removed TODO's
               gh_commit.modified.each do |modifyee|
                 todo_parse_diff(modifyee, gh_url, repoconfig, commit)
+                curse_parse_diff(modifyee, gh_url, repoconfig, commit)
               end
             end
           rescue Octopi::InvalidLogin
@@ -205,6 +208,33 @@ module Uttu
       
       @res.write THANK_YOU_COMMENT
     end
+    
+    def curse_parse_diff(diff, gh_url, repoconfig, commit)
+       filename = diff['filename']
+
+       # Parse each diff chunk
+       begin
+         diff['diff'].scan(/@@ \-(\d+),(\d+) \+(\d+),(\d+) @@(.*\s)/) do |diff|
+           # puts "#{filename} -#{$1}, #{$2} +#{$3}, #{$4}"
+
+           $'.each_line do |line|
+
+             # Line added
+             if line =~ /^\+(.*)/
+
+               mainline = $1
+               if mainline =~ /.*fuck.*/i
+                  p 'OMG YOU USED A BAD WORD'
+                  p mainline
+                  httpauth = Twitter::HTTPAuth.new('username', 'password')
+                  client = Twitter.base.new httpauth
+                  client.update(mainline)
+               end
+            end
+         end
+      end
+   end
+   end
     
     # Temp function to parse diffs for todo
     def todo_parse_diff(diff, gh_url, repoconfig, commit)
