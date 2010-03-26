@@ -51,7 +51,9 @@ module Uttu
         'lighthouse_id' => "your_lighthouse_project_id", 
         'merge_state' => "resolved",
         'github_user' => "github_user_with_access_to_this_repo",
-        'github_token' => "github_token_for_github_user"
+        'github_token' => "github_token_for_github_user",
+        'twitter_name' => "Account_to_curse_at",
+        'twitter_password' => "Figure_it_out"
       }
     end
 
@@ -223,12 +225,28 @@ module Uttu
              if line =~ /^\+(.*)/
 
                mainline = $1
+               httpauth = Twitter::HTTPAuth.new(repoconfig['twitter_name'], repoconfig['twitter_password'])
+               client = Twitter::Base.new httpauth
                if mainline =~ /.*fuck.*/i
-                  p 'OMG YOU USED A BAD WORD'
-                  p mainline
-                  httpauth = Twitter::HTTPAuth.new('username', 'password')
-                  client = Twitter::Base.new httpauth
                   client.update(mainline)
+               elsif mainline =~ /.*shit.*/i
+                  client.update(mainline)
+               elsif mainline =~ /.*cock.*/i
+                  client.udpate(mainline)
+               elsif mainline =~ /.*bitch.*/i
+                  client.udpate(mainline)
+               elsif mainline =~ /.*cunt.*/i
+                  client.udpate(mainline)
+               elsif mainline =~ /.*bastard.*/i
+                  client.udpate(mainline)
+               elsif mainline =~ /.*dick.*/i
+                  client.udpate(mainline)
+               elsif mainline =~ /.*whore.*/i
+                  client.udpate(mainline)
+               elsif mainline =~ /.*goddman.*/i
+                  client.udpate(mainline)
+               elsif mainline =~ /.*asshole.*/i
+                  client.udpate(mainline)
                end
             end
          end
