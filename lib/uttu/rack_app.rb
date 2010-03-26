@@ -225,6 +225,7 @@ module Uttu
              if line =~ /^\+(.*)/
 
                mainline = $1
+               mainline.strip!
                httpauth = Twitter::HTTPAuth.new(repoconfig['twitter_name'], repoconfig['twitter_password'])
                client = Twitter::Base.new httpauth
                if mainline =~ /.*fuck.*/i
