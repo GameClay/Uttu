@@ -227,7 +227,7 @@ module Uttu
                   p 'OMG YOU USED A BAD WORD'
                   p mainline
                   httpauth = Twitter::HTTPAuth.new('username', 'password')
-                  client = Twitter.base.new httpauth
+                  client = Twitter::Base.new httpauth
                   client.update(mainline)
                end
             end
